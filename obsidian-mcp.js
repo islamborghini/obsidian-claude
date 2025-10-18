@@ -119,6 +119,37 @@ class ObsidianMCPServer {
             },
             required: ['path', 'content']
           }
+        },
+        {
+          name: 'analyze_vault_structure',
+          description: 'Analyze the folder structure and organization patterns of the vault',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              include_stats: {
+                type: 'boolean',
+                description: 'Include statistics about note counts and topics'
+              }
+            }
+          }
+        },
+        {
+          name: 'check_related_notes',
+          description: 'Check for related notes that might be relevant to a topic',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              topic: {
+                type: 'string',
+                description: 'Topic or concept to find related notes for'
+              },
+              folder_hint: {
+                type: 'string',
+                description: 'Optional folder to focus the search'
+              }
+            },
+            required: ['topic']
+          }
         }
       ]
     }));
@@ -128,7 +159,7 @@ class ObsidianMCPServer {
       resources: [
         {
           uri: 'vault://index',
-          name: 'Vault Index',
+          name: `${vaultName}`,
           description: 'List of all notes in the vault',
           mimeType: 'application/json'
         }
@@ -173,6 +204,12 @@ class ObsidianMCPServer {
         case 'update_note':
           return await this.updateNote(args.path, args.content, args.append);
           
+        case 'analyze_vault_structure':
+          return await this.analyzeVaultStructure(args.include_stats);
+          
+        case 'check_related_notes':
+          return await this.checkRelatedNotes(args.topic, args.folder_hint);
+          
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -187,6 +224,124 @@ class ObsidianMCPServer {
       path: path.relative(this.vaultPath, file).replace(/\.md$/, ''),
       fullPath: file
     }));
+  }
+
+  async analyzeVaultStructure(includeStats = true) {
+    try {
+      const notes = await this.getAllNotes();
+      
+      // Build folder hierarchy
+      const folderStructure = {};
+      const folderCounts = {};
+      
+      for (const note of notes) {
+        const parts = note.path.split('/');
+        const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : 'root';
+        
+        if (!folderStructure[folder]) {
+          folderStructure[folder] = [];
+          folderCounts[folder] = 0;
+        }
+        
+        folderStructure[folder].push(note.path);
+        folderCounts[folder]++;
+      }
+      
+      // Get unique folder paths and organize hierarchically
+      const allFolders = Object.keys(folderStructure).sort();
+      
+      const result = {
+        total_notes: notes.length,
+        folders: allFolders,
+        folder_counts: folderCounts,
+        structure: {}
+      };
+      
+      // Build hierarchical structure
+      for (const folder of allFolders) {
+        const depth = folder === 'root' ? 0 : folder.split('/').length;
+        if (!result.structure[depth]) {
+          result.structure[depth] = [];
+        }
+        result.structure[depth].push({
+          path: folder,
+          count: folderCounts[folder]
+        });
+      }
+      
+      // Add sample notes from each folder if includeStats
+      if (includeStats) {
+        result.folder_samples = {};
+        for (const folder of allFolders) {
+          result.folder_samples[folder] = folderStructure[folder].slice(0, 5);
+        }
+      }
+      
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify(result, null, 2)
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error analyzing vault structure: ${error.message}`
+        }]
+      };
+    }
+  }
+
+  async checkRelatedNotes(topic, folderHint = '') {
+    try {
+      const notes = await this.getAllNotes();
+      const related = [];
+      
+      for (const note of notes) {
+        // Filter by folder if hint provided
+        if (folderHint && !note.path.startsWith(folderHint)) {
+          continue;
+        }
+        
+        const content = await fs.readFile(note.fullPath, 'utf-8');
+        const { data, content: body } = matter(content);
+        
+        // Check if topic appears in title, content, or tags
+        const titleMatch = note.path.toLowerCase().includes(topic.toLowerCase());
+        const contentMatch = body.toLowerCase().includes(topic.toLowerCase());
+        const tagMatch = data.tags && data.tags.some(tag => 
+          tag.toLowerCase().includes(topic.toLowerCase())
+        );
+        
+        if (titleMatch || contentMatch || tagMatch) {
+          related.push({
+            path: note.path,
+            title: data.title || note.path.split('/').pop(),
+            tags: data.tags || [],
+            match_type: titleMatch ? 'title' : (tagMatch ? 'tag' : 'content')
+          });
+        }
+      }
+      
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            topic,
+            related_notes: related,
+            count: related.length
+          }, null, 2)
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error checking related notes: ${error.message}`
+        }]
+      };
+    }
   }
 
   async searchNotes(query) {
@@ -388,12 +543,16 @@ class ObsidianMCPServer {
 }
 
 // Start the server
-const vaultPath = process.env.OBSIDIAN_VAULT_PATH || process.argv[2];
+const vaultPath = process.env.OBSIDIAN_VAULT_PATH;
+const vaultName = process.env.OBSIDIAN_VAULT_NAME || path.basename(vaultPath);
 
 if (!vaultPath) {
-  console.error('Please provide vault path as environment variable OBSIDIAN_VAULT_PATH or as argument');
+  console.error('Error: OBSIDIAN_VAULT_PATH environment variable is not set');
+  console.error('Please set it in your claude_desktop_config.json file');
   process.exit(1);
 }
+
+console.error(`Using vault path: ${vaultPath}`);
 
 const server = new ObsidianMCPServer(vaultPath);
 server.start().catch(console.error);

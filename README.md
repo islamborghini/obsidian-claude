@@ -1,51 +1,60 @@
 # Obsidian MCP Server
 
-A Model Context Protocol (MCP) server that enables Claude Desktop to directly interact with your Obsidian vault. Search, read, create, and update notes seamlessly through natural conversation.
+A Model Context Protocol (MCP) server that connects Claude to your Obsidian vault, enabling intelligent note management with a learning-focused approach.
 
 ## Features
 
-- 🔍 **Full-text search** across your entire vault
-- 📖 **Read notes** with frontmatter and backlinks
-- ✍️ **Create new notes** with automatic directory creation
-- 🔄 **Update existing notes** (replace or append content)
-- 📁 **List notes** from your vault or specific folders
-- 🔗 **Backlink detection** to understand note relationships
-- 🏷️ **Frontmatter support** for metadata management
+- **Search & Read**: Search through your vault and read specific notes
+- **Create & Update**: Create new notes and update existing ones
+- **Vault Analysis**: Analyze your vault's folder structure and organization
+- **Related Notes**: Find notes related to topics before creating duplicates
+- **Backlink Detection**: Automatically find backlinks to notes
+- **Frontmatter Support**: Full support for YAML frontmatter metadata
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16 or higher)
-- [Claude Desktop](https://claude.ai/download) app
-- An Obsidian vault on your local machine
+- Node.js (v18 or higher)
+- An Obsidian vault
+- Claude Desktop app or MCP-compatible client
 
 ## Installation
 
-1. **Clone or download this repository:**
+### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/yourusername/obsidian-mcp-server.git
-cd obsidian-mcp-server
+git clone https://github.com/islamborghini/obsidian-claude.git
+cd obsidian-claude
 ```
 
-2. **Install dependencies:**
+### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
-3. **Configure Claude Desktop:**
+Required packages:
+- `@modelcontextprotocol/sdk` - MCP SDK
+- `gray-matter` - Frontmatter parsing
+- `glob` - File pattern matching
 
-Find your Claude Desktop configuration file:
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-- **Linux**: `~/.config/claude/claude_desktop_config.json`
+### 3. Configure Claude Desktop
 
-Add the following configuration:
+Edit your Claude Desktop configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`  
+**Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+Add this configuration:
 
 ```json
 {
   "mcpServers": {
     "obsidian": {
       "command": "node",
-      "args": ["/absolute/path/to/obsidian-mcp-server/server.js"],
+      "args": [
+        "/absolute/path/to/obsidian-claude/obsidian-mcp.js"
+      ],
       "env": {
         "OBSIDIAN_VAULT_PATH": "/absolute/path/to/your/obsidian/vault"
       }
@@ -54,157 +63,110 @@ Add the following configuration:
 }
 ```
 
-**Important:** Use absolute paths, not relative paths or `~`
+**Important**: Replace the paths with your actual paths:
+- First path: Location where you cloned this repo
+- Second path: Location of your Obsidian vault
 
-4. **Restart Claude Desktop** to load the MCP server
+### 4. Restart Claude Desktop
+
+Close and reopen Claude Desktop to load the MCP server.
+
+### 5. Verify Connection
+
+In Claude, ask: "Can you list the tools you have access to?"
+
+You should see tools like `search_notes`, `create_note`, `analyze_vault_structure`, etc.
 
 ## Usage
 
-Once configured, you can ask Claude to interact with your Obsidian vault:
+### Basic Commands
 
-### Example Commands
-
-- **Search notes:**
-  - "Search my notes for information about project planning"
-  - "Find all notes mentioning Python"
-
-- **Read notes:**
-  - "Read my note about meeting notes from today"
-  - "What's in my 'Ideas/startup-ideas' note?"
-
-- **Create notes:**
-  - "Create a new note called 'Books/ToRead' with a list of book recommendations"
-  - "Make a daily note for today with my schedule"
-
-- **Update notes:**
-  - "Add these action items to my project note"
-  - "Update my reading list with this new book"
-
-- **List notes:**
-  - "Show me all notes in my Projects folder"
-  - "What notes do I have about machine learning?"
-
-## Project Structure
-
+**Search for notes:**
 ```
-obsidian-mcp-server/
-├── server.js          # Main MCP server implementation
-├── package.json       # Node.js dependencies
-├── README.md         # This file
-└── .gitignore        # Git ignore rules
+Search my vault for notes about "quantum mechanics"
 ```
 
-## Configuration Options
-
-### Environment Variables
-
-- `OBSIDIAN_VAULT_PATH`: Path to your Obsidian vault (required)
-
-### Alternative Setup
-
-You can also pass the vault path as a command argument:
-
-```json
-{
-  "mcpServers": {
-    "obsidian": {
-      "command": "node",
-      "args": [
-        "/path/to/server.js",
-        "/path/to/your/vault"
-      ]
-    }
-  }
-}
+**Read a note:**
 ```
+Read the note at path "Physics/Quantum Mechanics"
+```
+
+**Create a note:**
+```
+Create a note called "Einstein Field Equations" in the Physics folder
+```
+
+**List notes in a folder:**
+```
+List all notes in the derivations folder
+```
+
+**Analyze vault structure:**
+```
+Analyze my vault structure and show me the folder organization
+```
+
+### Learning Mode (Recommended Setup)
+
+For the best learning-focused experience, give Claude these instructions:
+
+```
+When helping me create notes in Obsidian, follow this process:
+
+1. First, immediately analyze my vault structure to understand the organization (you have the path to the vault)
+2. Check for related notes on the topic
+3. Ask me questions about the concept to ensure I understand it
+4. Propose where the note should be placed and ask for my confirmation
+5. Keep notes concise (max half page), direct, and non-repetitive
+6. Avoid poetic language - be straightforward
+7. For derivations:
+   - Put them in the /derivations folder
+   - Ask me to derive it first before creating the note
+   - Only create the note after I demonstrate understanding
+
+Your role is to be a learning partner, not just a note generator.
+```
+
+#### Setting Up Custom Instructions
+
+1. Open Claude Desktop
+2. Click on your profile (bottom left) -> Settings
+3. Select "General" Tab
+4. Paste the learning mode instructions under "What personal preferences should Claude consider in responses?"
+5. Save
+
+You can also paste these instructions into your specific project:
+1. Select "Projects" Tab
+2. Select your project or create a new one
+3. Add a new instruction and paste the text above
+
+Now Claude will automatically follow this workflow whenever you ask to create notes.
 
 ## Troubleshooting
 
-### Server doesn't start
+### Server not connecting
+- Verify the paths in `claude_desktop_config.json` are absolute paths
+- Check that Node.js is installed: `node --version`
+- Look at Claude Desktop logs for errors
 
-1. Check that paths in the config are absolute paths
-2. Verify Node.js is installed: `node --version`
-3. Check Claude Desktop logs for errors
-4. Ensure your vault path exists and is accessible
+### Cannot find vault
+- Ensure `OBSIDIAN_VAULT_PATH` points to your vault root directory
+- Path should not include a trailing slash
+- Use absolute paths, not relative paths
 
-### "Tool not found" errors
+### Tools not appearing
+- Restart Claude Desktop completely
+- Verify the config file is valid JSON (use a JSON validator)
+- Check that the MCP server file is executable
 
-1. Restart Claude Desktop after configuration changes
-2. Verify the MCP server is listed in Claude's settings
+### Notes not being created
+- Ensure your vault path has write permissions
+- Check that folder names match exactly (case-sensitive)
+- Verify there are no special characters in file paths
 
-### Permission errors
-
-- Ensure the script has read/write access to your vault directory
-- On macOS, you may need to grant Claude Desktop file system permissions
-
-## Security & Privacy
-
-- **100% Local**: This server runs entirely on your machine
-- **No Internet Required**: Works offline, no data leaves your computer
-- **Direct File Access**: Reads/writes directly to your vault files
-- **No Authentication**: Relies on local file system permissions
-
-## Limitations
-
-- Cannot access Obsidian plugin-generated content (e.g., Dataview queries)
-- Simple text-based search (no semantic search yet)
-- Doesn't handle binary attachments or images
-- No support for Canvas files
-
-## Development
-
-### Adding New Features
-
-The server is built with the MCP SDK. To add new tools:
-
-1. Add tool definition in `setupHandlers()`
-2. Implement the tool function
-3. Add the case in the `CallToolRequestSchema` handler
-
-### Dependencies
-
-- `@modelcontextprotocol/sdk` - MCP protocol implementation
-- `gray-matter` - Frontmatter parsing
-- `glob` - File pattern matching
-
-## Roadmap
-
-- [ ] Semantic search using embeddings
-- [ ] Support for Canvas files
-- [ ] Integration with Obsidian templates
-- [ ] Tag management and filtering
-- [ ] Graph analysis tools
-- [ ] Support for attachments and images
-- [ ] Daily notes automation
-- [ ] Dataview query execution
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-MIT License - feel free to use this in your own projects!
-
-## Acknowledgments
-
-- Built on [Anthropic's MCP SDK](https://github.com/anthropics/mcp)
-- Designed for [Obsidian](https://obsidian.md/) knowledge management
-- Inspired by the Obsidian community's automation needs
-
-## Support
-
-For issues, questions, or suggestions:
-- Open an issue on GitHub
-- Check existing issues for solutions
-- Consult the [MCP documentation](https://modelcontextprotocol.io/docs)
+Built with:
+- [Model Context Protocol](https://modelcontextprotocol.io/) by Anthropic
 
 ---
 
-**Note:** This project is not officially affiliated with Obsidian or Anthropic.
+**Note**: This tool is designed to work with plain markdown files. It does not support Obsidian Canvas files, Excalidraw drawings, or other binary formats.
